@@ -5,18 +5,11 @@ from threading import Thread    # for handling task in separate jobs we need thr
 import socket           # tcp protocol
 import datetime         # for composing date/time stamp
 import sys              # handle system error
-import traceback        # for print_exc function
 import time             # for delay purpose
-global host, port
-
 cmd_GET_MENU = "GET_MENU"
 cmd_END_DAY = "CLOSING"
 default_menu = "menu_today.txt"
 default_save_base = "result-"
-
-host = socket.gethostname() # get the hostname or ip address
-port = 8888                 # The port used by the server
-
 def process_connection( conn , ip_addr, MAX_BUFFER_SIZE):  
     blk_count = 0
     net_bytes = conn.recv(MAX_BUFFER_SIZE)
@@ -66,43 +59,30 @@ def client_thread(conn, ip, port, MAX_BUFFER_SIZE = 4096):
     print('Connection ' + ip + ':' + port + "ended")
     return
 
-def start_server():
-    global host, port
-    # Here we made a socket instance and passed it two parameters. AF_INET and SOCK_STREAM. 
-    soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # this is for easy starting/killing the app
-    soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    print('Socket created')
-    
+def start_server(host, port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    print(f"Server started on {host}:{port}")
     try:
-        soc.bind((host, port))
-        print('Socket bind complete')
-    except socket.error as msg:
-        
-        print('Bind failed. Error : ' + str(sys.exc_info()))
-        print( msg.with_traceback() )
-        sys.exit()
-
-    #Start listening on socket and can accept 10 connection
-    soc.listen(10)
-    print('Socket now listening')
-
-    # this will make an infinite loop needed for 
-    # not reseting server for every client
-    try:
-        while True:
-            conn, addr = soc.accept()
-            # assign ip and port
+        sock.bind((host, port))
+        print(f"Server binded to {host}:{port}")
+    except socket.error as e:
+        raise Exception(f'Bind failed. Error: {e}')
+    sock.listen(10)
+    print(f"Server is listening on port {port}...")
+    while True:
+        try:
+            conn, addr = sock.accept()
             ip, port = str(addr[0]), str(addr[1])
-            print('Accepting connection from ' + ip + ':' + port)
-            try:
-                Thread(target=client_thread, args=(conn, ip, port)).start()
-            except:
-                print("Terrible error!")
-                traceback.print_exc()
-    except:
-        pass
-    soc.close()
+            print(f"Accepted connection from {ip}:{port}")
+            Thread(target=client_thread, args=(conn, ip, port)).start()
+        except Exception as e:
+            print(f"Error: {e}")
+            break
+    sock.close()
     return
 
-start_server()  
+host = socket.gethostname()
+port = 8888
+if __name__ == "__main__":
+    start_server(host, port)
