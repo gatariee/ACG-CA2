@@ -1,4 +1,5 @@
 Things that can be improved:
+============================================================================================
 1.  Error handling: The script does not handle errors very well. If the default_menu file is not found, for example, 
     the script will simply print an error message and exit. It would be better to add proper error handling to handle 
     these cases in a more elegant way.
@@ -28,6 +29,8 @@ Things that can be improved:
     -   Use a database to store the end-of-day orders, instead of saving them to a file.
     -   Implement load balancing to distribute the workload among multiple servers.
 
+
+<br /><br />
 Note: AES for the data encryption, and RSA (Digital Signatures) for the key exchange and authentication.
 ============================================================================================
 
