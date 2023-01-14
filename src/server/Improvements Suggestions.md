@@ -29,7 +29,7 @@ Things that can be improved:
     -   Implement load balancing to distribute the workload among multiple servers.
 
 Note: AES for the data encryption, and RSA (Digital Signatures) for the key exchange and authentication.
-============================================================================================================================================================
+============================================================================================
 
 AES (Advanced Encryption Standard) is a symmetric encryption algorithm that can be used to encrypt data sent between the client and the server.
 
@@ -43,7 +43,7 @@ AES (Advanced Encryption Standard) is a symmetric encryption algorithm that can 
 
 You would need to encrypt the data before sending it to the client, and decrypt it after receiving it from the client.
 
-============================================================================================================================================================
+============================================================================================
 
 RSA (Rivest–Shamir–Adleman) is an asymmetric encryption algorithm that can be used to implement an authentication mechanism to prevent unauthorized access in this script.
 
