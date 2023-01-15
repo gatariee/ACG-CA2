@@ -109,6 +109,9 @@ Outline
                 - The other party will use the certificate creator's public key to verify the signature
                 - If the signature is valid, the certificate is valid
         - The client and server will now use their own certificate to authenticate each other
+        - Note that since the certificate is self-signed:
+            - It is not verified by a trusted third-party (such as a certificate authority) and should be used with caution
+            - It is important that both the client and the server have a copy of the certificate and trust it before using it to authenticate each other
     - Issues Solved:
         - The client and server can now verify the identity of each other
         - Non-repudiation is restored
