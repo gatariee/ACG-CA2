@@ -4,7 +4,6 @@ Outline
 - The program is run in additional outlets outside SP, using public wifi
     - we should assume that the wifi does not have a secure tunnel
     - this means that the data is not encrypted
-    - potential for MITM or eavesdropping attacks
 ## Program Flow
 - server.py
     - the server is run by the main outlet
@@ -41,7 +40,8 @@ Outline
 - Confidentiality
     - Problem:
         - The data is not encrypted
-        - The attacker can read the data as plaintext
+        - Confidentiality of data in transit is compromised (client and server)
+        - Confidentiality of data at rest is compromised (client)
     - Solution:
         - We will solve this by encrypting the data with AES (Advanced Encryption Standard)
         - AES is a symmetric encryption algorithm
@@ -74,13 +74,14 @@ Outline
                 - AES is typically used for data encryption
     - Issues Solved: 
         - Data transferred between the client and server is encrypted with an AES key
-        - The AES key is distributed using RSA
+            - Confidentiality of data in transit is restored
         - The RSA keypairs are encrypted with a password (for the client)
-        - Confidentiality is restored
+            - The AES key is distributed using RSA
+            - Confidentiality of data at rest is restored
 - Integrity
     - Problem:
-        - The data is not verified
-        - An attacker can modify the data
+        - The data is not verified by the client and server, the data could be tampered with
+        - Integrity of data in transit is compromised (client and server)
     - Solution:
         - We will solve this by using a message digest via a hash function
         - We will use SHA-256 (Secure Hash Algorithm 256)
@@ -90,13 +91,14 @@ Outline
         - The receiver will hash the data and compare it with the message digest
         - If the message digest does not match, the data is tampered with
     - Issues Solved:
-        - If any data is tampered with, the message digest will not match
-        - The data is not accepted
-        - Integrity is restored
+        - If any data is tampered with, the message digest will not match. 
+            - The receiving party will know that the data is tampered with
+            - Integrity of data in transit is restored
 - Non-repudiation
     - Problem:
         - The client and server can not verify the identity of each other
         - An attacker can impersonate the client or server
+        - Non-repudiation of data in transit is compromised (client and server)
     - Solution:
         - We will solve this by using a self-signed certificate
         - The client and server generate their own public/private key pair
@@ -114,8 +116,8 @@ Outline
             - It is important that both the client and the server have a copy of the certificate and trust it before using it to authenticate each other
     - Issues Solved:
         - The client and server can now verify the identity of each other
-        - Non-repudiation is restored
-        
+            - The data sent can now be trusted, as the identity of the sender is verified
+            - Non-repudiation of data in transit is restored
 
 
 
