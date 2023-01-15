@@ -1,27 +1,35 @@
 #------------------------------------------------------------------------------------------
 # Server.py
 #------------------------------------------------------------------------------------------
-from threading import Thread    # for handling task in separate jobs we need threading
-import socket           # tcp protocol
-import datetime         # for composing date/time stamp
-import sys              # handle system error
-import time             # for delay purpose
-cmd_GET_MENU = "GET_MENU"
-cmd_END_DAY = "CLOSING"
-default_menu = "menu_today.txt"
-default_save_base = "result-"
-def process_connection( conn , ip_addr, MAX_BUFFER_SIZE):  
+from threading import Thread
+import socket
+import datetime
+import sys
+import time
+
+# constants
+CMD_MENU = "GET_MENU"
+CMD_CLOSING = "CLOSING"
+MENU = "menu_today.txt"
+SAVE_NAME = "result-"
+MAX_BUFFER_SIZE = 4096
+
+# ports and host
+host = socket.gethostname()
+port = 8888
+
+def process_connection( conn , ip_addr):  
     blk_count = 0
     net_bytes = conn.recv(MAX_BUFFER_SIZE)
     dest_file = open("temp","w")  # temp file is to satisfy the syntax rule. Can ignore the file.
     while net_bytes != b'':
         if blk_count == 0: #  1st block
             usr_cmd = net_bytes[0:15].decode("utf8").rstrip()
-            if cmd_GET_MENU in usr_cmd: # ask for menu
+            if CMD_MENU in usr_cmd: # ask for menu
                 try:
-                    src_file = open(default_menu,"rb")
+                    src_file = open(MENU,"rb")
                 except:
-                    print("file not found : " + default_menu)
+                    print("file not found : " + MENU)
                     sys.exit(0)
                 while True:
                     read_bytes = src_file.read(MAX_BUFFER_SIZE)
@@ -32,15 +40,15 @@ def process_connection( conn , ip_addr, MAX_BUFFER_SIZE):
                 src_file.close()
                 print("Processed SENDING menu") 
                 return
-            elif cmd_END_DAY in usr_cmd: # ask for to save end day order
-                #Hints: the net_bytes after the cmd_END_DAY may be encrypted. 
+            elif CMD_CLOSING in usr_cmd: # ask for to save end day order
+                #Hints: the net_bytes after the CMD_CLOSING may be encrypted. 
                 now = datetime.datetime.now()
-                filename = default_save_base +  ip_addr + "-" + now.strftime("%Y-%m-%d_%H%M")                
+                filename = SAVE_NAME +  ip_addr + "-" + now.strftime("%Y-%m-%d_%H%M")                
                 dest_file = open(filename,"wb")
 
                 # Hints: net_bytes may be an encrypted block of message.
                 # e.g. plain_bytes = my_decrypt(net_bytes)
-                dest_file.write( net_bytes[ len(cmd_END_DAY): ] ) # remove the CLOSING header    
+                dest_file.write( net_bytes[ len(CMD_CLOSING): ] ) # remove the CLOSING header    
                 blk_count = blk_count + 1
         else:  # write subsequent blocks of END_DAY message block
             # Hints: net_bytes may be an encrypted block of message.
@@ -51,13 +59,11 @@ def process_connection( conn , ip_addr, MAX_BUFFER_SIZE):
     print("saving file as " + filename)
     time.sleep(3)
     print("Processed CLOSING done") 
-    return
 
-def client_thread(conn, ip, port, MAX_BUFFER_SIZE = 4096):
-    process_connection( conn, ip, MAX_BUFFER_SIZE)
+def client_thread(conn, ip, port):
+    process_connection( conn, ip)
     conn.close()  # close connection
     print('Connection ' + ip + ':' + port + "ended")
-    return
 
 def start_server(host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -67,7 +73,8 @@ def start_server(host, port):
         sock.bind((host, port))
         print(f"Server binded to {host}:{port}")
     except socket.error as e:
-        raise Exception(f'Bind failed. Error: {e}')
+        print(f"Bind failed. Error: {e}")
+        sys.exit()
     sock.listen(10)
     print(f"Server is listening on port {port}...")
     while True:
@@ -80,9 +87,5 @@ def start_server(host, port):
             print(f"Error: {e}")
             break
     sock.close()
-    return
-
-host = socket.gethostname()
-port = 8888
 if __name__ == "__main__":
     start_server(host, port)
