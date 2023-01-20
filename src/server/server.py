@@ -12,80 +12,77 @@ CMD_MENU = "GET_MENU"
 CMD_CLOSING = "CLOSING"
 MENU = "menu_today.txt"
 SAVE_NAME = "result-"
-MAX_BUFFER_SIZE = 4096
+MAX_BUFFER_SIZE = 2048
+def send_file(conn: socket.socket, filename: str):
+    try:
+        with open(filename, "rb") as f:
+            read_bytes = f.read()
+            if(len(read_bytes) == 0):
+                print(f"[SERVER] WARNING: File is empty: '{filename}'.")
+            conn.send(read_bytes)
+    except FileNotFoundError:
+        print(f"[SERVER] FAIL: File not found: '{filename}'.") 
+        sys.exit(0)
 
-# ports and host
-host = socket.gethostname()
-port = 8888
+def save_file(filename: str, data: bytes):
+    if(len(data) == 0):
+        print(f"[SERVER] WARNING: Sales received is empty.")
+    with open(filename, "wb") as f:
+        f.write(data[7:])
 
-def process_connection( conn , ip_addr):  
-    blk_count = 0
-    net_bytes = conn.recv(MAX_BUFFER_SIZE)
-    dest_file = open("temp","w")  # temp file is to satisfy the syntax rule. Can ignore the file.
-    while net_bytes != b'':
-        if blk_count == 0: #  1st block
-            usr_cmd = net_bytes[0:15].decode("utf8").rstrip()
-            if CMD_MENU in usr_cmd: # ask for menu
-                try:
-                    src_file = open(MENU,"rb")
-                except:
-                    print("file not found : " + MENU)
-                    sys.exit(0)
-                while True:
-                    read_bytes = src_file.read(MAX_BUFFER_SIZE)
-                    if read_bytes == b'':
-                        break
-                    #hints: you may apply a scheme (hashing/encryption) to read_bytes before sending to client.
-                    conn.send(read_bytes)
-                src_file.close()
-                print("Processed SENDING menu") 
-                return
-            elif CMD_CLOSING in usr_cmd: # ask for to save end day order
-                #Hints: the net_bytes after the CMD_CLOSING may be encrypted. 
-                now = datetime.datetime.now()
-                filename = SAVE_NAME +  ip_addr + "-" + now.strftime("%Y-%m-%d_%H%M")                
-                dest_file = open(filename,"wb")
+def receive_file(conn: socket.socket, data_block: bytes):
+    data_block += conn.recv(MAX_BUFFER_SIZE)
+    while True:
+        net_bytes = conn.recv(MAX_BUFFER_SIZE)
+        if net_bytes != b'':
+            data_block += net_bytes
+        else:
+            break
+    return data_block
+def command_menu(conn: socket.socket, ip_addr: str):  
+    while True:
+        net_bytes = conn.recv(MAX_BUFFER_SIZE)
+        if net_bytes:
+            break
+    usr_cmd = net_bytes[0:15].decode("utf8").rstrip()
+    if CMD_MENU in usr_cmd:
+        print(f"[CMD] RECIEVED: {CMD_MENU} from {ip_addr}")
+        send_file(conn, MENU)
+        print("[CMD] OK: Sent Menu to " + ip_addr)
+        return
+    elif CMD_CLOSING in usr_cmd: 
+        initial = b""
+        initial += net_bytes
+        data = receive_file(conn, initial)
+        print(f"[CMD] RECIEVED: {CMD_CLOSING} from {ip_addr}")
+        filename = SAVE_NAME +  ip_addr + "-" + (datetime.datetime.now()).strftime("%Y-%m-%d_%H%M")
+        save_file(filename, data)
+        print(f"[CMD] OK: File saved as: {filename}")
+        return
 
-                # Hints: net_bytes may be an encrypted block of message.
-                # e.g. plain_bytes = my_decrypt(net_bytes)
-                dest_file.write( net_bytes[ len(CMD_CLOSING): ] ) # remove the CLOSING header    
-                blk_count = blk_count + 1
-        else:  # write subsequent blocks of END_DAY message block
-            # Hints: net_bytes may be an encrypted block of message.
-            net_bytes = conn.recv(MAX_BUFFER_SIZE)
-            dest_file.write(net_bytes)
-    # last block / empty block
-    dest_file.close()
-    print("saving file as " + filename)
-    time.sleep(3)
-    print("Processed CLOSING done") 
-
-def client_thread(conn, ip, port):
-    process_connection( conn, ip)
+def client_thread(conn: socket.socket, ip: str, port: int):
+    command_menu(conn, ip)
     conn.close()  # close connection
-    print('Connection ' + ip + ':' + port + "ended")
+    print('[SERVER] Connection ' + ip + ':' + port + " closed.")
 
 def start_server(host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     print(f"Server started on {host}:{port}")
-    try:
-        sock.bind((host, port))
-        print(f"Server binded to {host}:{port}")
-    except socket.error as e:
-        print(f"Bind failed. Error: {e}")
-        sys.exit()
+    sock.bind((host, port))
     sock.listen(10)
     print(f"Server is listening on port {port}...")
     while True:
         try:
             conn, addr = sock.accept()
             ip, port = str(addr[0]), str(addr[1])
-            print(f"Accepted connection from {ip}:{port}")
+            print(f"[SERVER] INCOMING connection from {ip}:{port}")
             Thread(target=client_thread, args=(conn, ip, port)).start()
-        except Exception as e:
-            print(f"Error: {e}")
-            break
-    sock.close()
+        except KeyboardInterrupt:
+            print("[SERVER] Keyboard Interrupt. Closing server.")
+            sock.close()
+            sys.exit()
 if __name__ == "__main__":
-    start_server(host, port)
+    HOST = socket.gethostbyname(socket.gethostname())
+    PORT = 8888
+    start_server(HOST, PORT)
