@@ -6,13 +6,36 @@ import socket
 import datetime
 import sys
 import time
-
+from Cryptodome.PublicKey import RSA
+from Cryptodome.Cipher import PKCS1_OAEP
 # constants
 CMD_MENU = "GET_MENU"
 CMD_CLOSING = "CLOSING"
+CMD_KEYS = "PKI"
+PKI = {}
 MENU = "menu_today.txt"
 SAVE_NAME = "result-"
 MAX_BUFFER_SIZE = 2048
+def send_key(conn: socket.socket):
+    try:
+        with open("server_public.pem", "rb") as f:
+            data = f.read()
+            conn.send(data)
+            data = conn.recv(4096)
+            return data
+    except FileNotFoundError:
+        print(f"[KEYS] FAIL: Public key not found.")
+        return False
+def load_keys(password: str):
+    try:
+        with open("server_private.pem", "rb") as f:
+            key = RSA.import_key(f.read(), passphrase=password.encode())
+            private_enc = PKCS1_OAEP.new(key)
+    except FileNotFoundError:
+        print(f"[ERROR] Could not import public key. Ensure that the key exists.")
+        sys.exit()
+    return private_enc
+
 def send_file(conn: socket.socket, filename: str):
     try:
         with open(filename, "rb") as f:
@@ -34,7 +57,7 @@ def receive_file(conn: socket.socket, data_block: bytes):
     data_block += conn.recv(MAX_BUFFER_SIZE)
     while True:
         net_bytes = conn.recv(MAX_BUFFER_SIZE)
-        if net_bytes != b'':
+        if net_bytes == '':
             data_block += net_bytes
         else:
             break
@@ -48,7 +71,7 @@ def command_menu(conn: socket.socket, ip_addr: str):
     if CMD_MENU in usr_cmd:
         print(f"[CMD] RECIEVED: {CMD_MENU} from {ip_addr}")
         send_file(conn, MENU)
-        print("[CMD] OK: Sent Menu to " + ip_addr)
+        print("[CMD] OK: Sent menu to " + ip_addr)
         return
     elif CMD_CLOSING in usr_cmd: 
         initial = b""
@@ -59,7 +82,14 @@ def command_menu(conn: socket.socket, ip_addr: str):
         save_file(filename, data)
         print(f"[CMD] OK: File saved as: {filename}")
         return
-
+    elif CMD_KEYS in usr_cmd:
+        print(f"[SERVER] RECEIVED: {CMD_KEYS} from {ip_addr}")
+        print("[SERVER] OK: PKI bound with: " + ip_addr)
+        PKI[ip_addr] = PKCS1_OAEP.new(RSA.import_key(net_bytes[3:]))
+        send_key(conn)
+        print("[SERVER] OK: PKI sent to: " + ip_addr)
+        print("[SERVER] OK. RSA KP Successful.")
+        return
 def client_thread(conn: socket.socket, ip: str, port: int):
     command_menu(conn, ip)
     conn.close()  # close connection
@@ -83,6 +113,7 @@ def start_server(host, port):
             sock.close()
             sys.exit()
 if __name__ == "__main__":
+    cipher = load_keys("server")
     HOST = socket.gethostbyname(socket.gethostname())
     PORT = 8888
     start_server(HOST, PORT)
