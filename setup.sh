@@ -14,4 +14,5 @@ else
 fi
 source env/Scripts/activate
 pip install -r requirements.txt
-
+echo "Setup complete. Please follow the instructions at README.md"
+read -p "Press enter to continue..."

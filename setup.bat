@@ -21,9 +21,9 @@ if exist env (
 set /p answer="Would you like to run the script? (y/n): "
 if %answer% == y (
     echo Starting Server and Client...
-    start cmd /k "cd server & python server.py"
-    timeout /t 2 /nobreak
-    start cmd /k "cd client & python client.py"
+    start "Server" cmd /k "cd server & python server.py"
+    timeout 2
+    start "Client" cmd /k "cd client & python client.py"
 ) else (
     echo Exiting... You may run the script using instructions at README.md
     exit
