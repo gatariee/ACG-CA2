@@ -5,7 +5,6 @@ from threading import Thread
 import socket
 import datetime
 import sys
-import time
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP
 from Cryptodome.Signature import pkcs1_15
@@ -23,7 +22,7 @@ SAVE_NAME = "result-"
 MAX_BUFFER_SIZE = 2048
 def send_key(conn: socket.socket):
     try:
-        with open("server_public.pem", "rb") as f:
+        with open("public.pem", "rb") as f:
             data = f.read()
             conn.send(data)
             data = conn.recv(4096)
@@ -33,7 +32,7 @@ def send_key(conn: socket.socket):
         return False
 def load_keys(password: str):
     try:
-        with open("server_private.pem", "rb") as f:
+        with open("private.pem", "rb") as f:
             key = RSA.import_key(f.read(), passphrase=password.encode())
             private_enc = PKCS1_OAEP.new(key)
     except FileNotFoundError:
@@ -70,7 +69,6 @@ def receive_file(conn: socket.socket, data_block: bytes):
 
 def check_signature(data: bytes):
     signature = data.split(b"|")[0][7:]
-    # print(f"[DEBUGGING] Received Signature: {signature[:10]}...")
     data = data.split(b"|")[1]
     try:
         pkcs1_15.new(PKI[0]['key']).verify(SHA256.new(data), signature)

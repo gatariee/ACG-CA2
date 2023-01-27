@@ -64,7 +64,7 @@ def exchange_keys():
         conn.connect((host, port))
         conn.sendall(cmd_KEYS)
         try:
-            with open("client_public.pem", "rb") as f:
+            with open("public.pem", "rb") as f:
                 data = f.read()
                 conn.send(data)
                 print(f"[CLIENT] Sending key...")
@@ -117,14 +117,14 @@ def receive_file():
 
 def initialize_keys(password: str):
     try:
-        with open("client_private.pem", "rb") as f:
+        with open("private.pem", "rb") as f:
             private_key = RSA.import_key(f.read(), passphrase=password.encode())
             private_enc = PKCS1_OAEP.new(private_key)
     except:
         print(f"Authenticity of private key could not be verified. Ensure that the key is correct.")
         sys.exit()
     try:
-        with open("client_public.pem", "rb") as f:
+        with open("public.pem", "rb") as f:
             public_key = RSA.import_key(f.read())
             public_enc = PKCS1_OAEP.new(public_key)
     except FileNotFoundError:
