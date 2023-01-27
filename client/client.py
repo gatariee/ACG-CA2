@@ -3,12 +3,9 @@
 #------------------------------------------------------------------------------------------
 #!/usr/bin/env python3
 # Please starts the tcp server first before running this client
- 
-import datetime
+
 import sys              # handle system error
 import socket
-import time
-import ssl
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP
 from Cryptodome.Signature import pkcs1_15
@@ -151,6 +148,7 @@ if __name__ == "__main__":
     if send_file():
         print(f"[CLOSING] OK.")
     print(f"[CLIENT] Closing connection.")
+    input("Press enter to exit...")
 
 
 
