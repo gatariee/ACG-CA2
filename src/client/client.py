@@ -8,16 +8,56 @@ import datetime
 import sys              # handle system error
 import socket
 import time
+import ssl
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP
+from Cryptodome.Signature import pkcs1_15
+from Cryptodome.Hash import SHA256
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import padding
 
 host = socket.gethostbyname(socket.gethostname())
 port = 8888         # The port used by the server
 cmd_GET_MENU = b"GET_MENU"
 cmd_END_DAY = b"CLOSING"
 cmd_KEYS = b"PKI"
+cmd_CERTS = b"CERTS"
 menu_file = "menu.csv"
 return_file = "day_end.csv"
+
+
+def exchange_certs():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
+        conn.connect((host, port))
+        print(f"[CLIENT] Connected to {host}:{port}")
+        conn.sendall(cmd_CERTS)
+        try:
+            with open("client_cert.crt", "rb") as f:
+                file_data = f.read()
+                data = conn.recv(4096)
+                print(f"[CLIENT] Receiving cert...")
+                conn.send(file_data)
+                print(f"[CLIENT] Sending cert...")
+                return data
+        except FileNotFoundError:
+            print(f"[CERTS] FAIL: File not found: 'client.crt'.")
+            return False
+def check_certs(cert):
+    with open("server_cert.crt", "rb") as f:
+        server_cert_data = f.read()
+        correct_server_cert = x509.load_pem_x509_certificate(server_cert_data, default_backend())
+        server_cert = x509.load_pem_x509_certificate(cert, default_backend())
+        try:
+            server_cert.public_key().verify(
+                server_cert.signature,
+                correct_server_cert.tbs_certificate_bytes,
+                padding.PKCS1v15(),
+                server_cert.signature_hash_algorithm,
+            )
+            return True
+        except Exception:
+            return False
 
 def exchange_keys():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
@@ -27,11 +67,11 @@ def exchange_keys():
             with open("client_public.pem", "rb") as f:
                 data = f.read()
                 conn.send(data)
-                print(f"[CLIENT] Sending public key...")
+                print(f"[CLIENT] Sending key...")
                 data = conn.recv(4096)
-                print(f"[CLIENT] Receiving server's public key...")
+                print(f"[CLIENT] Receiving key...")
                 cipher = PKCS1_OAEP.new(RSA.import_key(data))
-                return cipher
+                return cipher, data
         except FileNotFoundError:
             print(f"[KEYS] FAIL: File not found: '{menu_file}'.")
             return False
@@ -42,11 +82,10 @@ def send_file():
         conn.sendall(cmd_END_DAY)
         try:
             with open(return_file, "rb") as f:
-                data = f.read(1024)
-                while data != b'':
-                    print(f"[DEBUGGING] Sending: {data}")
-                    conn.send(data)
-                    data = f.read(1024)
+                data = f.read()
+                signature = pkcs1_15.new(client_private).sign(SHA256.new(data))
+                send_data = signature + b"|" + data
+                conn.send(send_data)
                 return True
         except FileNotFoundError:
             print(f"[CLOSING] FAIL: File not found: '{return_file}'.")
@@ -57,7 +96,16 @@ def receive_file():
         conn.connect((host, port))
         conn.sendall(cmd_GET_MENU)
         data = conn.recv(4096)
-        print(f"[DEBUGGING] Received: {data}")
+        server_signature = data.split(b"|")[0]
+        # print(f"[DEBUGGING] Received Signature: {server_signature[:20]}...")
+        data = data.split(b"|")[1]
+        hash_obj = SHA256.new(data)
+        try:
+            pkcs1_15.new(RSA.import_key(server_key)).verify(hash_obj, server_signature)
+            print(f"[DEBUGGING] Signature OK")
+        except (ValueError, TypeError):
+            print(f"[DEBUGGING] Signature FAIL")
+            return False
         try:
             with open(menu_file, "wb") as f:
                 f.write(data)
@@ -70,34 +118,36 @@ def receive_file():
 def initialize_keys(password: str):
     try:
         with open("client_private.pem", "rb") as f:
-            key = RSA.import_key(f.read(), passphrase=password.encode())
-            private_enc = PKCS1_OAEP.new(key)
+            private_key = RSA.import_key(f.read(), passphrase=password.encode())
+            private_enc = PKCS1_OAEP.new(private_key)
     except:
         print(f"Authenticity of private key could not be verified. Ensure that the key is correct.")
         sys.exit()
     try:
         with open("client_public.pem", "rb") as f:
-            key = RSA.import_key(f.read())
-            public_enc = PKCS1_OAEP.new(key)
+            public_key = RSA.import_key(f.read())
+            public_enc = PKCS1_OAEP.new(public_key)
     except FileNotFoundError:
         print(f"[ERROR] Could not import public key. Ensure that the key exists.")
         sys.exit()
-    return private_enc, public_enc
+    return private_enc, public_enc, private_key
 
 
 if __name__ == "__main__":
+    server_cert = exchange_certs()
+    if check_certs(server_cert):
+        print(f"[CERTS] OK.")
+    else:
+        print(f"[CERTS] FAIL.")
+        sys.exit()
     print(f"[CLIENT] Loading keys...")
-    cipher, client_public = initialize_keys("client")
-    print(f"[CLIENT] OK. Keys successfully loaded")
-    print(f"[CLIENT] Attempting Connection to {host}:{port}")
-    print(f"[CLIENT] Connected to {host}:{port}")
-    print(f"[CLIENT] Beginning PKI exchange...")
-    server_public = exchange_keys()
-    print(f"[CLIENT] OK. PKI exchange complete.")
-    # print(f"[CLIENT] Sending: {cmd_GET_MENU.decode()}")
+    cipher, client_public, client_private = initialize_keys("client")
+    server_public, server_key = exchange_keys()
+    print(f"[PKI] OK. ")
+    print(f"[CLIENT] Sending: {cmd_GET_MENU.decode()}")
     if receive_file():
         print(f"[GET_MENU] OK.")
-    # print(f"[CLIENT] Sending: {cmd_END_DAY.decode()}")
+    print(f"[CLIENT] Sending: {cmd_END_DAY.decode()}")
     if send_file():
         print(f"[CLOSING] OK.")
     print(f"[CLIENT] Closing connection.")
