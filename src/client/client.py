@@ -94,10 +94,10 @@ if __name__ == "__main__":
     print(f"[CLIENT] Beginning PKI exchange...")
     server_public = exchange_keys()
     print(f"[CLIENT] OK. PKI exchange complete.")
-    print(f"[CLIENT] Sending: {cmd_GET_MENU.decode()}")
+    # print(f"[CLIENT] Sending: {cmd_GET_MENU.decode()}")
     if receive_file():
         print(f"[GET_MENU] OK.")
-    print(f"[CLIENT] Sending: {cmd_END_DAY.decode()}")
+    # print(f"[CLIENT] Sending: {cmd_END_DAY.decode()}")
     if send_file():
         print(f"[CLOSING] OK.")
     print(f"[CLIENT] Closing connection.")
