@@ -7,8 +7,10 @@
 import sys              # handle system error
 import socket
 from Cryptodome.PublicKey import RSA
-from Cryptodome.Cipher import PKCS1_OAEP
+from Cryptodome.Cipher import PKCS1_OAEP, AES
 from Cryptodome.Signature import pkcs1_15
+from Cryptodome.Util.Padding import pad, unpad
+from Cryptodome.Random import get_random_bytes
 from Cryptodome.Hash import SHA256
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -20,9 +22,29 @@ cmd_GET_MENU = b"GET_MENU"
 cmd_END_DAY = b"CLOSING"
 cmd_KEYS = b"PKI"
 cmd_CERTS = b"CERTS"
+cmd_AES = b"AES"
 menu_file = "menu.csv"
 return_file = "day_end.csv"
 
+def request_session():
+    global aes_key, iv
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
+        conn.connect((host, port))
+        conn.sendall(cmd_AES)
+        enc_data = conn.recv(4096)
+        dec_data = cipher.decrypt(enc_data).split(b"|")
+        aes_key = dec_data[0]
+        iv = dec_data[1]
+
+def encrypt_aes(data):
+    cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+    ct_bytes = cipher.encrypt(pad(data, AES.block_size))
+    return ct_bytes
+
+def decrypt_aes(ct):
+    cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+    pt = unpad(cipher.decrypt(ct), AES.block_size)
+    return pt
 
 def exchange_certs():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
@@ -73,6 +95,7 @@ def exchange_keys():
             print(f"[KEYS] FAIL: File not found: '{menu_file}'.")
             return False
 
+
 def send_file():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
         conn.connect((host, port))
@@ -82,7 +105,8 @@ def send_file():
                 data = f.read()
                 signature = pkcs1_15.new(client_private).sign(SHA256.new(data))
                 send_data = signature + b"|" + data
-                conn.send(send_data)
+                enc_data = encrypt_aes(send_data)
+                conn.send(enc_data)
                 return True
         except FileNotFoundError:
             print(f"[CLOSING] FAIL: File not found: '{return_file}'.")
@@ -92,9 +116,11 @@ def receive_file():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
         conn.connect((host, port))
         conn.sendall(cmd_GET_MENU)
-        data = conn.recv(4096)
+        enc_data = conn.recv(4096)
+        print(f"[DEBUGGING] Receiving ENCRYPTED data: {enc_data[:10]}")
+        data = decrypt_aes(enc_data)
+        print(f"[DEBUGGING] Decrypting data: {data[:20]}")
         server_signature = data.split(b"|")[0]
-        # print(f"[DEBUGGING] Received Signature: {server_signature[:20]}...")
         data = data.split(b"|")[1]
         hash_obj = SHA256.new(data)
         try:
@@ -141,6 +167,7 @@ if __name__ == "__main__":
     cipher, client_public, client_private = initialize_keys("client")
     server_public, server_key = exchange_keys()
     print(f"[PKI] OK. ")
+    request_session()
     print(f"[CLIENT] Sending: {cmd_GET_MENU.decode()}")
     if receive_file():
         print(f"[GET_MENU] OK.")

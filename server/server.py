@@ -6,7 +6,9 @@ import socket
 import datetime
 import sys
 from Cryptodome.PublicKey import RSA
-from Cryptodome.Cipher import PKCS1_OAEP
+from Cryptodome.Cipher import PKCS1_OAEP, AES
+from Cryptodome.Util.Padding import pad, unpad
+from Cryptodome.Random import get_random_bytes
 from Cryptodome.Signature import pkcs1_15
 from Cryptodome.Hash import SHA256
 from cryptography import x509
@@ -16,10 +18,37 @@ CMD_MENU = "GET_MENU"
 CMD_CLOSING = "CLOSING"
 CMD_KEYS = "PKI"
 CMD_CERTS = "CERTS"
+CMD_AES = "AES"
 PKI = []
 MENU = "menu_today.txt"
 SAVE_NAME = "result-"
 MAX_BUFFER_SIZE = 2048
+def generate_aes():
+    global aes_key, iv
+    aes_key = get_random_bytes(16)
+    iv = get_random_bytes(16)
+
+def encrypt_aes(data):
+    cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+    ct_bytes = cipher.encrypt(pad(data, AES.block_size))
+    return ct_bytes
+
+def decrypt_aes(ct):
+    cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+    pt = unpad(cipher.decrypt(ct), AES.block_size)
+    return pt
+
+def send_aes(conn: socket.socket):
+    data = aes_key + b"|" + iv
+    ip = conn.getpeername()[0]
+    for client in PKI:
+        if client['ip'] == ip:
+            cipher = client['cipher']
+            print(data)
+            data = cipher.encrypt(data)
+    conn.send(data)
+
+
 def send_key(conn: socket.socket):
     try:
         with open("public.pem", "rb") as f:
@@ -46,7 +75,9 @@ def send_file(conn: socket.socket, filename: str):
             read_bytes = f.read()
             signature = pkcs1_15.new(key).sign(SHA256.new(read_bytes))
             data = signature + b"|" + read_bytes
-            conn.send(data)
+            enc_data = encrypt_aes(data)
+            conn.send(enc_data)
+            print(f"Sending ENCRYPTED data: {enc_data[:10]}")
     except FileNotFoundError:
         print(f"[SERVER] FAIL: File not found: '{filename}'.") 
         sys.exit(0)
@@ -68,7 +99,7 @@ def receive_file(conn: socket.socket, data_block: bytes):
     return data_block
 
 def check_signature(data: bytes):
-    signature = data.split(b"|")[0][7:]
+    signature = data.split(b"|")[0]
     data = data.split(b"|")[1]
     try:
         pkcs1_15.new(PKI[0]['key']).verify(SHA256.new(data), signature)
@@ -118,7 +149,8 @@ def command_menu(conn: socket.socket, ip_addr: str):
         print(f"[CMD] RECIEVED: {CMD_CLOSING} from {ip_addr}")
         initial = b""
         initial += net_bytes
-        data = receive_file(conn, initial)
+        enc_data = receive_file(conn, initial)[7:]
+        data = decrypt_aes(enc_data)
         if check_signature(data):
             filename = SAVE_NAME +  ip_addr + "-" + (datetime.datetime.now()).strftime("%Y-%m-%d_%H%M")
             data = data.split(b"|")[1]
@@ -128,6 +160,11 @@ def command_menu(conn: socket.socket, ip_addr: str):
             print("[SERVER] FAIL: Signature invalid.")
     elif CMD_KEYS in usr_cmd:
         print(f"[SERVER] RECEIVED: {CMD_KEYS} from {ip_addr}")
+        for i in range(len(PKI)):
+            if PKI[i]['ip'] == ip_addr:
+                print("[PKI] OK: PKI already bound to: " + ip_addr)
+                send_key(conn)
+                return
         dict_data = {
             "ip": ip_addr,
             "key": RSA.import_key(net_bytes[3:]),
@@ -144,6 +181,14 @@ def command_menu(conn: socket.socket, ip_addr: str):
             print("[CERTS] OK.")
         else:
             print("[CERTS] FAIL.")
+    elif CMD_AES in usr_cmd:
+        print(f"[SERVER] RECEIVED: {CMD_AES} from {ip_addr}")
+        if len(PKI) == 0:
+            print("[AES] FAIL: No PKI bound.")
+            return
+        generate_aes()
+        send_aes(conn)
+        print("[AES] OK: AES sent to: " + ip_addr)
 
 def client_thread(conn: socket.socket, ip: str, port: int):
     command_menu(conn, ip)
