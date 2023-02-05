@@ -5,10 +5,10 @@ from threading import Thread
 import socket
 import datetime
 import sys
+import os
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP, AES
 from Cryptodome.Util.Padding import pad, unpad
-from Cryptodome.Random import get_random_bytes
 from Cryptodome.Signature import pkcs1_15
 from Cryptodome.Hash import SHA256
 from cryptography import x509
@@ -25,8 +25,8 @@ SAVE_NAME = "result-"
 MAX_BUFFER_SIZE = 2048
 def generate_aes():
     global aes_key, iv
-    aes_key = get_random_bytes(16)
-    iv = get_random_bytes(16)
+    aes_key = os.urandom(16)
+    iv = os.urandom(16)
 
 def encrypt_aes(data):
     cipher = AES.new(aes_key, AES.MODE_CBC, iv)

@@ -10,7 +10,6 @@ from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP, AES
 from Cryptodome.Signature import pkcs1_15
 from Cryptodome.Util.Padding import pad, unpad
-from Cryptodome.Random import get_random_bytes
 from Cryptodome.Hash import SHA256
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -175,7 +174,6 @@ if __name__ == "__main__":
     if send_file():
         print(f"[CLOSING] OK.")
     print(f"[CLIENT] Closing connection.")
-    input("Press enter to exit...")
 
 
 
