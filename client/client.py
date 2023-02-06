@@ -6,6 +6,7 @@
 
 import sys              # handle system error
 import socket
+from termcolor import colored
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP, AES
 from Cryptodome.Signature import pkcs1_15
@@ -30,11 +31,21 @@ def request_session():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
         conn.connect((host, port))
         conn.sendall(cmd_AES)
-        enc_data = conn.recv(4096)
-        dec_data = cipher.decrypt(enc_data).split(b"|")
-        aes_key = dec_data[0]
-        iv = dec_data[1]
+        print(colored(f"[AES] Requesting New Session Key...", "blue"))
 
+        enc_data = conn.recv(4096)
+        print(colored(f"[AES] Received Encrypted Session Key: {enc_data[:10]}...", "blue"))
+
+        dec_data = cipher.decrypt(enc_data).split(b"|")
+        print(colored(f"[AES] Decrypting Session Key...", "blue"))
+
+        aes_key = dec_data[0]
+        print(colored(f"[AES] Decrypted AES Key: {aes_key}", "blue"))
+
+        iv = dec_data[1]
+        print(colored(f"[AES] Decrypted IV: {iv}", "blue"))
+
+        print(colored(f"[IMPORTANT] Session Key Exchange Complete! All further exchanges will be encrypted using the shared session key.", "green", attrs=["bold"]))
 def encrypt_aes(data):
     cipher = AES.new(aes_key, AES.MODE_CBC, iv)
     ct_bytes = cipher.encrypt(pad(data, AES.block_size))
@@ -49,14 +60,18 @@ def exchange_certs():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
         conn.connect((host, port))
         print(f"[CLIENT] Connected to {host}:{port}")
+        print(f"""
+        {colored("Unencrypted: RED (danger)", "red")} 
+        {colored("Encrypted: BLUE (safe)", "blue")}
+        """)
         conn.sendall(cmd_CERTS)
         try:
             with open("client_cert.crt", "rb") as f:
                 file_data = f.read()
                 data = conn.recv(4096)
-                print(f"[CLIENT] Receiving cert...")
+                print(colored(f"[CERTS] Receiving cert...", "red"))
                 conn.send(file_data)
-                print(f"[CLIENT] Sending cert...")
+                print(colored(f"[CERTS] Sending cert...", "red"))
                 return data
         except FileNotFoundError:
             print(f"[CERTS] FAIL: File not found: 'client.crt'.")
@@ -85,9 +100,9 @@ def exchange_keys():
             with open("public.pem", "rb") as f:
                 data = f.read()
                 conn.send(data)
-                print(f"[CLIENT] Sending key...")
+                print(colored(f"[PKI] Sending key...", "red"))
                 data = conn.recv(4096)
-                print(f"[CLIENT] Receiving key...")
+                print(colored(f"[PKI] Receiving key...", "red"))
                 cipher = PKCS1_OAEP.new(RSA.import_key(data))
                 return cipher, data
         except FileNotFoundError:
@@ -104,7 +119,9 @@ def send_file():
                 data = f.read()
                 signature = pkcs1_15.new(client_private).sign(SHA256.new(data))
                 send_data = signature + b"|" + data
+                print(f"[CLOSING] UNENCRYPTED data: {send_data[:10]}")
                 enc_data = encrypt_aes(send_data)
+                print(f"[CLOSING] Sending ENCRYPTED data: {enc_data[:10]}")
                 conn.send(enc_data)
                 return True
         except FileNotFoundError:
@@ -115,10 +132,13 @@ def receive_file():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
         conn.connect((host, port))
         conn.sendall(cmd_GET_MENU)
-        enc_data = conn.recv(4096)
-        print(f"[DEBUGGING] Receiving ENCRYPTED data: {enc_data[:10]}")
-        data = decrypt_aes(enc_data)
-        print(f"[DEBUGGING] Decrypting data: {data[:20]}")
+        try:
+            enc_data = conn.recv(4096)
+            print(f"[GET_MENU] Receiving ENCRYPTED data: {enc_data[:10]}")
+            data = decrypt_aes(enc_data)
+        except ValueError:
+                print(f"[ERROR] !!! Packet was dropped during transmission, this could be due to bad connection.")
+        print(f"[GET_MENU] After DECRYPTING data:{data[:10]}")
         server_signature = data.split(b"|")[0]
         data = data.split(b"|")[1]
         hash_obj = SHA256.new(data)
@@ -158,18 +178,20 @@ def initialize_keys(password: str):
 if __name__ == "__main__":
     server_cert = exchange_certs()
     if check_certs(server_cert):
-        print(f"[CERTS] OK.")
+        print(colored(f"[CERTS] Certificates verified.\n", attrs=["bold"]))
     else:
         print(f"[CERTS] FAIL.")
         sys.exit()
-    print(f"[CLIENT] Loading keys...")
+    print(colored(f"[PKI] Loading keys...", "red"))
     cipher, client_public, client_private = initialize_keys("client")
     server_public, server_key = exchange_keys()
-    print(f"[PKI] OK. ")
+    print(colored(f"[PKI] Keys OK.", attrs=["bold"]))
+    print(colored(f"[IMPORTANT] PKI Established, AES key exchange will now occur with RSA encryption.\n", "green", attrs=["bold"]))
     request_session()
-    print(f"[CLIENT] Sending: {cmd_GET_MENU.decode()}")
+    # print(f"\n[CLIENT] Sending: {cmd_GET_MENU.decode()}")
+    print(colored(f"\n[CLIENT] Sending: {cmd_GET_MENU.decode()}", attrs=["bold"]))
     if receive_file():
-        print(f"[GET_MENU] OK.")
+        print(f"[GET_MENU] OK. \n")
     print(f"[CLIENT] Sending: {cmd_END_DAY.decode()}")
     if send_file():
         print(f"[CLOSING] OK.")

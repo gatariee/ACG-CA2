@@ -6,6 +6,7 @@ import socket
 import datetime
 import sys
 import os
+from termcolor import colored
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP, AES
 from Cryptodome.Util.Padding import pad, unpad
@@ -44,7 +45,6 @@ def send_aes(conn: socket.socket):
     for client in PKI:
         if client['ip'] == ip:
             cipher = client['cipher']
-            print(data)
             data = cipher.encrypt(data)
     conn.send(data)
 
@@ -75,9 +75,10 @@ def send_file(conn: socket.socket, filename: str):
             read_bytes = f.read()
             signature = pkcs1_15.new(key).sign(SHA256.new(read_bytes))
             data = signature + b"|" + read_bytes
+            print(f"[CMD] UNENCRYPTED data: {data[:10]}")
             enc_data = encrypt_aes(data)
             conn.send(enc_data)
-            print(f"Sending ENCRYPTED data: {enc_data[:10]}")
+            print(f"[CMD] Sending ENCRYPTED data: {enc_data[:10]}")
     except FileNotFoundError:
         print(f"[SERVER] FAIL: File not found: '{filename}'.") 
         sys.exit(0)
@@ -142,15 +143,21 @@ def command_menu(conn: socket.socket, ip_addr: str):
             break
     usr_cmd = net_bytes[0:15].decode("utf8").rstrip()
     if CMD_MENU in usr_cmd:
-        print(f"[CMD] RECIEVED: {CMD_MENU} from {ip_addr}")
+        print(f"\n[CMD] RECIEVED: {CMD_MENU} from {ip_addr}")
         send_file(conn, MENU)
-        print("[CMD] OK: Sent menu to " + ip_addr)
+        print("[CMD] OK: Sent menu to " + ip_addr + "\n")
     elif CMD_CLOSING in usr_cmd: 
         print(f"[CMD] RECIEVED: {CMD_CLOSING} from {ip_addr}")
         initial = b""
         initial += net_bytes
         enc_data = receive_file(conn, initial)[7:]
-        data = decrypt_aes(enc_data)
+        print(f"[CMD] RECEIVED ENCRYPTED data: {enc_data[:10]}")
+        try:
+            data = decrypt_aes(enc_data)
+        except Exception as e:
+            print(f"[CMD] FAIL: {e}")
+            sys.exit(0)
+        print(f"[CMD] After UNENCRYPTING data: {data[:10]}")
         if check_signature(data):
             filename = SAVE_NAME +  ip_addr + "-" + (datetime.datetime.now()).strftime("%Y-%m-%d_%H%M")
             data = data.split(b"|")[1]
@@ -193,7 +200,6 @@ def command_menu(conn: socket.socket, ip_addr: str):
 def client_thread(conn: socket.socket, ip: str, port: int):
     command_menu(conn, ip)
     conn.close()
-    print(f"[SERVER] Connection from {ip}:{port} closed.")
 
 def start_server(host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -206,7 +212,6 @@ def start_server(host, port):
         try:
             conn, addr = sock.accept()
             ip, port = str(addr[0]), str(addr[1])
-            print(f"[SERVER] INCOMING connection from {ip}:{port}")
             Thread(target=client_thread, args=(conn, ip, port)).start()
         except KeyboardInterrupt:
             print("[SERVER] Keyboard Interrupt. Closing server.")

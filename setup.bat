@@ -24,6 +24,7 @@ if %answer% == y (
     start "Server" cmd /k "cd server & python server.py"
     timeout 2
     start "Client" cmd /k "cd client & python client.py"
+    exit
 ) else (
     echo Exiting... You may run the script using instructions at README.md
     exit
