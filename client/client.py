@@ -37,16 +37,16 @@ def request_session():
         print(colored(f"[AES] Requesting New Session Key...", "blue"))
 
         enc_data = conn.recv(4096)
-        print(colored(f"[AES] Received Encrypted Session Key: {enc_data[:10]}...", "blue"))
+        print(colored(f"[AES] Received Encrypted Session Key: {enc_data[:15].hex()}...", "blue"))
 
         dec_data = cipher.decrypt(enc_data).split(b"|")
-        print(colored(f"[AES] Decrypting Session Key...", "blue"))
+        print(colored(f"[AES] Decrypted Session Key: {dec_data[0][:15].hex()}...", "blue"))
 
         aes_key = dec_data[0]
-        print(colored(f"[AES] Decrypted AES Key: {aes_key}", "blue"))
+        print(colored(f"[AES] Key Portion: {aes_key.hex()}", "blue"))
 
         iv = dec_data[1]
-        print(colored(f"[AES] Decrypted IV: {iv}", "blue"))
+        print(colored(f"[AES] IV Portion: {iv.hex()}", "blue"))
 
         print(colored(f"[IMPORTANT] Session Key Exchange Complete! All further exchanges will be encrypted using the shared session key.", "green", attrs=["bold"]))
         
@@ -158,7 +158,7 @@ def send_file():
                 data = f.read()
                 signature = pkcs1_15.new(client_private).sign(SHA256.new(data))
                 send_data = signature + b"|" + data
-                print(f"[CLOSING] UNENCRYPTED data: {send_data[:10]}")
+                print(f"[CLOSING] UNENCRYPTED data: {send_data[:10].hex()}...")
                 enc_data = encrypt_aes(send_data)
                 print(f"[CLOSING] Sending ENCRYPTED data: {enc_data[:10]}")
                 conn.send(enc_data)
@@ -181,7 +181,7 @@ def receive_file():
             data = decrypt_aes(enc_data)
         except ValueError:
                 print(f"[ERROR] !!! Packet was dropped during transmission, this could be due to bad connection.")
-        print(f"[GET_MENU] After DECRYPTING data:{data[:10]}")
+        print(f"[GET_MENU] After DECRYPTING data: {data[:10].hex()}...")
         server_signature = data.split(b"|")[0]
         data = data.split(b"|")[1]
         hash_obj = SHA256.new(data)
