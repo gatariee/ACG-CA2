@@ -27,6 +27,9 @@ menu_file = "menu.csv"
 return_file = "day_end.csv"
 
 def request_session():
+    """
+    It requests a new AES key and IV from the server, decrypts them, and stores them in global variables
+    """
     global aes_key, iv
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
         conn.connect((host, port))
@@ -46,17 +49,36 @@ def request_session():
         print(colored(f"[AES] Decrypted IV: {iv}", "blue"))
 
         print(colored(f"[IMPORTANT] Session Key Exchange Complete! All further exchanges will be encrypted using the shared session key.", "green", attrs=["bold"]))
+        
 def encrypt_aes(data):
+    """
+    It takes a string, pads it to a multiple of 16 bytes, and then encrypts it using AES-CBC with a key
+    and IV
+    
+    :param data: The data to be encrypted
+    :return: The encrypted data.
+    """
     cipher = AES.new(aes_key, AES.MODE_CBC, iv)
     ct_bytes = cipher.encrypt(pad(data, AES.block_size))
     return ct_bytes
 
 def decrypt_aes(ct):
+    """
+    It decrypts the ciphertext using the AES key and the initialization vector
+    
+    :param ct: ciphertext
+    :return: The decrypted message.
+    """
     cipher = AES.new(aes_key, AES.MODE_CBC, iv)
     pt = unpad(cipher.decrypt(ct), AES.block_size)
     return pt
 
 def exchange_certs():
+    """
+    The client sends a command to the server, the server responds with a command to send the client's
+    certificate, the client sends the certificate, and the server responds with the server's certificate
+    :return: The server's certificate.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
         conn.connect((host, port))
         print(f"[CLIENT] Connected to {host}:{port}")
@@ -76,7 +98,15 @@ def exchange_certs():
         except FileNotFoundError:
             print(f"[CERTS] FAIL: File not found: 'client.crt'.")
             return False
+        
 def check_certs(cert):
+    """
+    It takes a certificate as a string, loads it as a certificate object, and then verifies that the
+    certificate was signed by the correct public key
+    
+    :param cert: The certificate to check
+    :return: The server's certificate.
+    """
     with open("server_cert.crt", "rb") as f:
         server_cert_data = f.read()
         correct_server_cert = x509.load_pem_x509_certificate(server_cert_data, default_backend())
@@ -93,6 +123,11 @@ def check_certs(cert):
             return False
 
 def exchange_keys():
+    """
+    It sends a command to the server, then it sends the public key to the server, then it receives the
+    server's public key, then it returns the cipher and the server's public key
+    :return: The cipher and the data.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
         conn.connect((host, port))
         conn.sendall(cmd_KEYS)
@@ -109,8 +144,12 @@ def exchange_keys():
             print(f"[KEYS] FAIL: File not found: '{menu_file}'.")
             return False
 
-
 def send_file():
+    """
+    It opens a socket connection to the server, sends a command to the server, then opens the file to be
+    sent, reads the file, signs the file, sends the file, and closes the connection
+    :return: The return_file is being returned.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
         conn.connect((host, port))
         conn.sendall(cmd_END_DAY)
@@ -129,6 +168,10 @@ def send_file():
             return False
 
 def receive_file():
+    """
+    It receives a file from the server, decrypts it, verifies the signature, and saves it to a file
+    :return: True if the file was saved successfully, otherwise it returns False.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
         conn.connect((host, port))
         conn.sendall(cmd_GET_MENU)
@@ -158,6 +201,15 @@ def receive_file():
             return False
 
 def initialize_keys(password: str):
+    """
+    It takes a password, and then it tries to open the private key file, and if it can't, it prints an
+    error message and exits. If it can, it tries to open the public key file, and if it can't, it prints
+    an error message and exits. If it can, it returns the private and public keys.
+    
+    :param password: str - The password to decrypt the private key
+    :type password: str
+    :return: The private_enc, public_enc, and private_key are being returned.
+    """
     try:
         with open("private.pem", "rb") as f:
             private_key = RSA.import_key(f.read(), passphrase=password.encode())
@@ -196,7 +248,3 @@ if __name__ == "__main__":
     if send_file():
         print(f"[CLOSING] OK.")
     print(f"[CLIENT] Closing connection.")
-
-
-
-
