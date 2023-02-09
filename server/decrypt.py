@@ -1,12 +1,23 @@
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 import os
+
 def load_keys():
+    """
+    It reads the private key from the file and returns it
+    :return: The private key is being returned.
+    """
     with open('private.pem', 'rb') as f:
         private_key = RSA.import_key(f.read(), passphrase='server'.encode())
     return private_key
 
 def decrypt_file(filename):
+    """
+    It reads the encrypted file, decrypts it using the private key, and writes the decrypted data back
+    to the file
+    
+    :param filename: The name of the file to be decrypted
+    """
     private_key = load_keys()
     with open(filename, 'rb') as f:
         enc_data = f.read()
@@ -16,6 +27,11 @@ def decrypt_file(filename):
         f.write(data)
 
 def encrypt_file(filename):
+    """
+    It encrypts the file using the public key.
+    
+    :param filename: The name of the file to encrypt
+    """
     public_key = load_keys()
     with open(filename, 'rb') as f:
         data = f.read()
