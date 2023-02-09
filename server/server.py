@@ -6,7 +6,6 @@ import socket
 import datetime
 import sys
 import os
-from termcolor import colored
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP, AES
 from Cryptodome.Util.Padding import pad, unpad
@@ -141,8 +140,10 @@ def save_file(filename: str, data: bytes):
     if(len(data) == 0):
         print(f"[SERVER] WARNING: Sales received is empty.")
     with open(filename, "wb") as f:
-        f.write(data)
-
+        public_key = key.publickey().export_key()
+        cipher = PKCS1_OAEP.new(RSA.import_key(public_key))
+        enc_data = cipher.encrypt(data)
+        f.write(enc_data)
 def receive_file(conn: socket.socket, data_block: bytes):
     """
     It receives data from a socket until the socket is closed
@@ -260,7 +261,7 @@ def command_menu(conn: socket.socket, ip_addr: str):
             sys.exit(0)
         print(f"[CMD] After UNENCRYPTING data: {data[:10]}")
         if check_signature(data):
-            filename = SAVE_NAME +  ip_addr + "-" + (datetime.datetime.now()).strftime("%Y-%m-%d_%H%M")
+            filename = SAVE_NAME +  ip_addr + "-" + (datetime.datetime.now()).strftime("%Y-%m-%d_%H%M") + ".enc"
             data = data.split(b"|")[1]
             save_file(filename, data)
             print(f"[CMD] OK: File saved as: {filename}")
