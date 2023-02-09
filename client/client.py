@@ -25,7 +25,6 @@ cmd_CERTS = b"CERTS"
 cmd_AES = b"AES"
 menu_file = "menu.csv"
 return_file = "day_end.csv"
-
 def request_session():
     """
     It requests a new AES key and IV from the server, decrypts them, and stores them in global variables
