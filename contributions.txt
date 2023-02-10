@@ -1,53 +1,48 @@
-Zavier Lee wey 
+Zavier Lee 
+    AES 
+        1. request_session()
 
-AES 
+        2. generate_aes()
 
-1. request_session()
+        3. encrypt_aes()
 
-2. generate_aes()
+        4. send_aes()
 
-3. encrypt_aes()
-
-4. send_aes()
-
-5. decrypt_aes()
+        5. decrypt_aes()
 
 
-SECURE FILE 
+    SECURE FILE 
 
-6. save_file()
+        6. save_file()
+        
+        7. decrypt.py
 
 
 
 Liew Wen Yu 
+    CERTIFICATES 
+        1. exchange_certs() - client 
 
-CERTIFICATES 
+        2. check_cert() - client 
 
-1. exchange_certs()
+        3. exchange_cert() - server
 
-2. check_cert() 
+        4. check_cert() - server
 
-3. exchange_cert() 
+    DIGITAL SIGNATURES 
 
-4. check_cert() 
+        5. receive_file() - client & server
 
-
-DIGITAL SIGNATURES 
-
-5. receive_file()
-
-6. check_signature() 
+        6. check_signature() - client & server
 
 
 
-chew Shu Wen 
+Chew Shu Wen 
+    RSA
+        1. initialize_keys()
 
-RSA
+        2. exchange_keys()
 
-1. initialize_keys()
+        3. load_keys()
 
-2. exchange_keys()
-
-3. load_keys()
-
-4. send_key() 
+        4. send_key() 

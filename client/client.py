@@ -29,6 +29,8 @@ return_file = "day_end.csv"
 
 def request_session():
     """
+    Author: Zavier Lee (P2205513)
+
     It requests a new AES key and IV from the server, decrypts them, and stores them in global variables
     """
     global aes_key, iv
@@ -53,6 +55,8 @@ def request_session():
         
 def encrypt_aes(data):
     """
+    Author: Zavier Lee (P2205513)
+
     It takes a string, pads it to a multiple of 16 bytes, and then encrypts it using AES-CBC with a key
     and IV
     
@@ -65,6 +69,8 @@ def encrypt_aes(data):
 
 def decrypt_aes(ct):
     """
+    Author: Zavier Lee (P2205513)
+
     It decrypts the ciphertext using the AES key and the initialization vector
     
     :param ct: ciphertext
@@ -76,6 +82,8 @@ def decrypt_aes(ct):
 
 def exchange_certs():
     """
+    Author: Liew Wen Yu (P2238814)
+
     The client sends a command to the server, the server responds with a command to send the client's
     certificate, the client sends the certificate, and the server responds with the server's certificate
     :return: The server's certificate.
@@ -102,6 +110,8 @@ def exchange_certs():
         
 def check_certs(cert):
     """
+    Author: Liew Wen Yu (P2238814)
+
     It takes a certificate as a string, loads it as a certificate object, and then verifies that the
     certificate was signed by the correct public key
     
@@ -125,6 +135,8 @@ def check_certs(cert):
 
 def exchange_keys():
     """
+    Author: Zavier Lee (P2205513)
+
     It sends a command to the server, then it sends the public key to the server, then it receives the
     server's public key, then it returns the cipher and the server's public key
     :return: The cipher and the data.
@@ -147,6 +159,8 @@ def exchange_keys():
 
 def send_file():
     """
+    Author: Zavier Lee (P2205513)
+
     It opens a socket connection to the server, sends a command to the server, then opens the file to be
     sent, reads the file, signs the file, sends the file, and closes the connection
     :return: The return_file is being returned.
@@ -157,6 +171,7 @@ def send_file():
         try:
             with open(return_file, "rb") as f:
                 data = f.read()
+                # Author: Liew Wen Yu (P2238814)
                 signature = pkcs1_15.new(client_private).sign(SHA256.new(data))
                 send_data = signature + b"|" + data
                 print(f"[CLOSING] UNENCRYPTED data: {send_data[:10].hex()}...")
@@ -170,6 +185,8 @@ def send_file():
 
 def receive_file():
     """
+    Author: Liew Wen Yu (P2238814)
+
     It receives a file from the server, decrypts it, verifies the signature, and saves it to a file
     :return: True if the file was saved successfully, otherwise it returns False.
     """
@@ -187,6 +204,7 @@ def receive_file():
         data = data.split(b"|")[1]
         hash_obj = SHA256.new(data)
         try:
+            # Author: Liew Wen Yu (P2238814)
             pkcs1_15.new(RSA.import_key(server_key)).verify(hash_obj, server_signature)
             print(f"[DEBUGGING] Signature OK")
         except (ValueError, TypeError):
@@ -203,6 +221,8 @@ def receive_file():
 
 def initialize_keys(password: str):
     """
+    Author: Chew Shu Wen (P2227423)
+
     It takes a password, and then it tries to open the private key file, and if it can't, it prints an
     error message and exits. If it can, it tries to open the public key file, and if it can't, it prints
     an error message and exits. If it can, it returns the private and public keys.
@@ -227,7 +247,11 @@ def initialize_keys(password: str):
         sys.exit()
     return private_enc, public_enc, private_key
 
-def main_menu():
+def main_menu() -> None:
+    """
+    Author: Zavier Lee (P2205513)
+    
+    """
     print("""
         1. Get Menu (request menu from server)
         2. Send Closing Sales (send closing sales to server)

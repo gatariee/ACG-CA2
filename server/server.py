@@ -27,6 +27,7 @@ MAX_BUFFER_SIZE = 2048
 
 def generate_aes():
     """
+    Author: Zavier Lee (P2205513)
     It generates a random AES key and IV.
     """
     global aes_key, iv
@@ -35,6 +36,7 @@ def generate_aes():
 
 def encrypt_aes(data):
     """
+    Author: Zavier Lee (P2205513)
     It takes a string, pads it to a multiple of 16 bytes, encrypts it with AES-CBC, and returns the
     ciphertext
     
@@ -47,6 +49,7 @@ def encrypt_aes(data):
 
 def decrypt_aes(ct):
     """
+    Author: Zavier Lee (P2205513)
     It decrypts the ciphertext using the AES key and the initialization vector
     
     :param ct: ciphertext
@@ -58,6 +61,7 @@ def decrypt_aes(ct):
 
 def send_aes(conn: socket.socket):
     """
+    Author: Zavier Lee (P2205513)
     It sends the AES key and IV to the client
     
     :param conn: socket.socket
@@ -73,6 +77,7 @@ def send_aes(conn: socket.socket):
 
 def send_key(conn: socket.socket):
     """
+    Author: Chew Shu Wen (P2227423)
     It opens the public key file, reads it, sends it to the client, and then receives the encrypted key
     from the client
     
@@ -92,6 +97,7 @@ def send_key(conn: socket.socket):
     
 def load_keys(password: str):
     """
+    Author: Chew Shu Wen (P2227423)
     It takes a password as a string, and returns a private encryption object and a key object.
     
     :param password: str
@@ -109,6 +115,7 @@ def load_keys(password: str):
 
 def send_file(conn: socket.socket, filename: str):
     """
+    Author: Zavier Lee (P2205513)
     It reads a file, signs it with a private key, then encrypts the signature and file with AES
     
     :param conn: socket.socket
@@ -119,6 +126,7 @@ def send_file(conn: socket.socket, filename: str):
     try:
         with open(filename, "rb") as f:
             read_bytes = f.read()
+            # Author: Liew Wen Yu (P2238814)
             signature = pkcs1_15.new(key).sign(SHA256.new(read_bytes))
             data = signature + b"|" + read_bytes
             print(f"[CMD] UNENCRYPTED data: {data[:10]}")
@@ -131,6 +139,7 @@ def send_file(conn: socket.socket, filename: str):
 
 def save_file(filename: str, data: bytes):
     """
+    Author: Zavier Lee (P2205513)
     It takes a filename and data as input, and writes the encrypted data to the file
     
     :param filename: The name of the file to be saved
@@ -148,6 +157,7 @@ def save_file(filename: str, data: bytes):
         
 def receive_file(conn: socket.socket, data_block: bytes):
     """
+    Author: Zavier Lee (P2205513)
     It receives data from a socket until the socket is closed
     
     :param conn: socket.socket
@@ -167,6 +177,7 @@ def receive_file(conn: socket.socket, data_block: bytes):
 
 def check_signature(data: bytes):
     """
+    Author: Liew Wen Yu (P2238814)
     It takes a byte string, splits it into two parts, the first part is the signature, the second part
     is the data. It then tries to verify the signature using the public key of the sender. If it
     succeeds, it returns True, otherwise it returns False
@@ -213,6 +224,7 @@ def check_certs(cert):
         
 def exchange_certs(conn: socket.socket):
     """
+    Author: Liew Wen Yu (P2238814)
     It opens the server's certificate, sends it to the client, and then receives the client's
     certificate
     
@@ -232,6 +244,7 @@ def exchange_certs(conn: socket.socket):
 
 def command_menu(conn: socket.socket, ip_addr: str):  
     """
+    Author: Zavier Lee (P2205513)
     It receives a command from the client, and depending on the command, it either sends the menu,
     receives a file, or sends the server's public key
     
@@ -303,6 +316,8 @@ def command_menu(conn: socket.socket, ip_addr: str):
 
 def client_thread(conn: socket.socket, ip: str, port: int):
     """
+    Author: Zavier Lee (P2205513)
+
     It takes a socket connection, the IP address of the client, and the port number of the client, and
     then it calls the command_menu function, passing it the socket connection and the IP address of the
     client
@@ -319,6 +334,8 @@ def client_thread(conn: socket.socket, ip: str, port: int):
 
 def start_server(host, port):
     """
+    Author: Zavier Lee (P2205513)
+    
     The function starts a server on the given host and port, and then listens for incoming connections. 
     
     When a connection is made, the function creates a new thread to handle the connection. 
