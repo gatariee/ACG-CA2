@@ -18,14 +18,5 @@ if exist env (
     echo Installing Python Dependencies...
     pip install -r requirements.txt
 )
-set /p answer="Would you like to run the script? (y/n): "
-if %answer% == y (
-    echo Starting Server and Client...
-    start "Server" cmd /k "cd server & python server.py"
-    timeout 2
-    cd client & python client.py
-    exit
-) else (
-    echo Exiting... You may run the script using instructions at README.md
-    exit
-)
+
+echo Installation successful, this setup script will now exit...

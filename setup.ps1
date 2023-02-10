@@ -1,9 +1,16 @@
 Write-Host "Checking python version..." -ForegroundColor White
-if ((python --version) -eq "Python 3.11.0") {
-    Write-Host "Python 3.11.0 is installed..." -ForegroundColor Green
+$python_version = (python --version)
+if ($python_version -match "^Python\s3\.([0-9]+)\.") {
+    $version = [int]$Matches[1]
+    if ($version -ge 9) {
+        Write-Host "Python 3.9 or higher is installed..." -ForegroundColor Green
+    } else {
+        Write-Host "Python 3.9 or higher is not installed..." -ForegroundColor Red
+        Write-Host "Please install Python 3.9 or higher from the official website" -ForegroundColor Red
+        exit
+    }
 } else {
-    Write-Host "Python 3.11.0 is not installed..." -ForegroundColor Red
-    Write-Host "Please install Python 3.11 from the official website" -ForegroundColor Red
+    Write-Host "Could not determine the installed Python version." -ForegroundColor Yellow
     exit
 }
 if (Test-Path "env") {
@@ -16,16 +23,8 @@ if (Test-Path "env") {
     Write-Host "Installing Python Dependencies..." -ForegroundColor Green
     pip install -r requirements.txt
 }
-$answer = Read-Host "Would you like to run the script? (y/n)"
-if($answer -eq "y") {
-    Write-Host "Starting Server and Client..." -ForegroundColor Green
-    Start-Process powershell.exe -ArgumentList "cd server; python server.py"
-    Start-Sleep -Seconds 2
-    Start-Process powershell.exe -ArgumentList "cd client; python client.py"
-} else {
-    Write-Host "Exiting... You may run the script using instructions at README.md" -ForegroundColor Red
-    exit
-}
+
+Write-Host "Installation Successful, you may now exit the script" -ForegroundColor Green
 
 
 
