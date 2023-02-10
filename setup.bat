@@ -1,12 +1,12 @@
 @echo off
 echo Checking python version...
 for /f "tokens=*" %%a in ('python --version') do set version=%%a
-if "%version%"=="Python 3.11.0" (
-    echo Python 3.11.0 is installed...
-) else (   
-    echo Python 3.11.0 is not installed...
-    echo Please install Python 3.11 from the official website
-    exit
+if %version:~0,3% GEQ 3.9 (
+    echo Python 3.9 or higher is installed...
+) else (
+    echo Python 3.9 or higher is not installed...
+    echo Please install Python 3.9 or higher from the official website
+    exit /b
 )
 if exist env (
     echo Virtual Environment already exists! Skipping install...
@@ -23,7 +23,7 @@ if %answer% == y (
     echo Starting Server and Client...
     start "Server" cmd /k "cd server & python server.py"
     timeout 2
-    start "Client" cmd /k "cd client & python client.py"
+    cd client & python client.py
     exit
 ) else (
     echo Exiting... You may run the script using instructions at README.md
