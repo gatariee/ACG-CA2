@@ -6,6 +6,7 @@
 
 import sys              # handle system error
 import socket
+import os
 from termcolor import colored
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP, AES
@@ -225,8 +226,15 @@ def initialize_keys(password: str):
         sys.exit()
     return private_enc, public_enc, private_key
 
+def main_menu():
+    print("""
+        1. Get Menu (request menu from server)
+        2. Send Closing Sales (send closing sales to server)
+        3. Exit
+    """)
 
 if __name__ == "__main__":
+    os.system('cls')
     server_cert = exchange_certs()
     if check_certs(server_cert):
         print(colored(f"[CERTS] Certificates verified.\n", attrs=["bold"]))
@@ -239,11 +247,21 @@ if __name__ == "__main__":
     print(colored(f"[PKI] Keys OK.", attrs=["bold"]))
     print(colored(f"[IMPORTANT] PKI Established, AES key exchange will now occur with RSA encryption.\n", "green", attrs=["bold"]))
     request_session()
-    # print(f"\n[CLIENT] Sending: {cmd_GET_MENU.decode()}")
-    print(colored(f"\n[CLIENT] Sending: {cmd_GET_MENU.decode()}", attrs=["bold"]))
-    if receive_file():
-        print(f"[GET_MENU] OK. \n")
-    print(f"[CLIENT] Sending: {cmd_END_DAY.decode()}")
-    if send_file():
-        print(f"[CLOSING] OK.")
-    print(f"[CLIENT] Closing connection.")
+    while 1:
+        main_menu()
+        choice = input(">> ")
+        match choice:
+            case "1":
+                os.system('cls')
+                print(colored(f"[CLIENT] Sending: {cmd_GET_MENU.decode()}", attrs=["bold"]))
+                if receive_file():
+                    print(f"[GET_MENU] OK. \n")
+            case "2":
+                os.system('cls')
+                print(colored(f"[CLIENT] Sending: {cmd_END_DAY.decode()}", attrs=["bold"]))
+                if send_file():
+                    print(f"[CLOSING] OK.")
+            case "3":
+                sys.exit()
+            case _:
+                print(f"[ERROR] Invalid option.")
