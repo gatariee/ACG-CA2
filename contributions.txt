@@ -1,0 +1,53 @@
+Zavier Lee wey 
+
+AES 
+
+1. request_session()
+
+2. generate_aes()
+
+3. encrypt_aes()
+
+4. send_aes()
+
+5. decrypt_aes()
+
+
+SECURE FILE 
+
+6. save_file()
+
+
+
+Liew Wen Yu 
+
+CERTIFICATES 
+
+1. exchange_certs()
+
+2. check_cert() 
+
+3. exchange_cert() 
+
+4. check_cert() 
+
+
+DIGITAL SIGNATURES 
+
+5. receive_file()
+
+6. check_signature() 
+
+
+
+chew Shu Wen 
+
+RSA
+
+1. initialize_keys()
+
+2. exchange_keys()
+
+3. load_keys()
+
+4. send_key() 
