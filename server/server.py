@@ -14,6 +14,7 @@ from Cryptodome.Hash import SHA256
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import padding
+
 CMD_MENU = "GET_MENU"
 CMD_CLOSING = "CLOSING"
 CMD_KEYS = "PKI"
@@ -130,11 +131,11 @@ def send_file(conn: socket.socket, filename: str):
 
 def save_file(filename: str, data: bytes):
     """
-    It saves the data to a file
+    It takes a filename and data as input, and writes the encrypted data to the file
     
-    :param filename: The name of the file to save
+    :param filename: The name of the file to be saved
     :type filename: str
-    :param data: The data that was received from the client
+    :param data: bytes
     :type data: bytes
     """
     if(len(data) == 0):
@@ -144,6 +145,7 @@ def save_file(filename: str, data: bytes):
         cipher = PKCS1_OAEP.new(RSA.import_key(public_key))
         enc_data = cipher.encrypt(data)
         f.write(enc_data)
+        
 def receive_file(conn: socket.socket, data_block: bytes):
     """
     It receives data from a socket until the socket is closed
